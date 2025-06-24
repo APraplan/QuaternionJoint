@@ -60,21 +60,21 @@ class QuaternionJointK:
             print("Motor average current : ", (self.Servo1.read_current() + self.Servo1.read_current() + self.Servo1.read_current())/3)
             
             if not tendon_a_streched:
-                self.servo1_zero -= 3
+                self.servo1_zero -= 5
                 self.Servo1.write_position(self.servo1_zero)
 
                 if np.abs(self.Servo1.read_current()) >= CURRENT_LIMIT:
                     tendon_a_streched = True
 
             if not tendon_b_streched:
-                self.servo2_zero -= 3
+                self.servo2_zero -= 5
                 self.Servo2.write_position(self.servo2_zero)
 
                 if np.abs(self.Servo2.read_current()) >= CURRENT_LIMIT:
                     tendon_b_streched = True
 
             if not tendon_c_streched:
-                self.servo3_zero -= 3
+                self.servo3_zero -= 5
                 self.Servo3.write_position(self.servo3_zero)
 
                 if np.abs(self.Servo3.read_current()) >= CURRENT_LIMIT:
