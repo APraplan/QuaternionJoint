@@ -1,22 +1,24 @@
-from QJ_dynamixel import DynamixelController
-import keyboard
+import sys
+import os
+
+submodule_path = os.path.abspath("dynamixel-controller")
+sys.path.insert(0, submodule_path)
+
+from time import sleep
+from dynamixel_controller import Dynamixel
+from QJ_kinematics import QuaternionJoint
+
 import keyboard
 import time
 
-STEP_SIZE = 20
+STEP_SIZE = 0.1
 DELAY = 0.05
 
-DXL_IDS = [1, 2, 3]
-
-dxl = DynamixelController(DXL_IDS)
-
-dxl.connect()
-dxl.enable_torque()
+QuaterionJoint = QuaternionJoint()
 
 print("=== Keyboard Velocity Control ===")
-print("Use W/S to control motor 1")
-print("Use A/D to control motor 2")
-print("Press Q to quit")
+print("Use W/S to control Rotation x")
+print("Use A/D to control Rotation y")
 
 try:
     while True:
@@ -26,35 +28,29 @@ try:
 
         # Motor 1: W/S
         if keyboard.is_pressed("w"):
-            new_pos = dxl.increment_position(1, STEP_SIZE)
-            print(f"[ID:1] + -> {new_pos}")
+            
             time.sleep(DELAY)
         elif keyboard.is_pressed("s"):
-            new_pos = dxl.increment_position(1, -STEP_SIZE)
-            print(f"[ID:1] - -> {new_pos}")
+
             time.sleep(DELAY)
 
         # Motor 2: A/D
         if keyboard.is_pressed("d"):
-            new_pos = dxl.increment_position(2, STEP_SIZE)
-            print(f"[ID:2] + -> {new_pos}")
+
             time.sleep(DELAY)
         elif keyboard.is_pressed("a"):
-            new_pos = dxl.increment_position(2, -STEP_SIZE)
-            print(f"[ID:2] - -> {new_pos}")
+
             time.sleep(DELAY)
 
         # Motor 3: Z/X
         if keyboard.is_pressed("x"):
-            new_pos = dxl.increment_position(3, STEP_SIZE)
-            print(f"[ID:3] + -> {new_pos}")
+
             time.sleep(DELAY)
         elif keyboard.is_pressed("z"):
-            new_pos = dxl.increment_position(3, -STEP_SIZE)
-            print(f"[ID:3] - -> {new_pos}")
+
             time.sleep(DELAY)
 
         time.sleep(0.01)
 
 finally:
-    dxl.close()
+    QuaterionJoint.disable()
