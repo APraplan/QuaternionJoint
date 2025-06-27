@@ -23,17 +23,17 @@ class QuaternionJointK:
         
 
         self.Servo1 = Dynamixel(dxl_ids[0], descriptive_device_name="XM430 test motor", 
-                series_name="xm", baudrate=bdrt, port_name="/dev/ttyUSB0")
+                series_name="xm", baudrate=bdrt, port_name="/dev/ttyUSB1")
         self.Servo1.begin_communication()
         self.Servo1.set_operating_mode("extended position")
 
         self.Servo2 = Dynamixel(dxl_ids[1], descriptive_device_name="XM430 test motor", 
-                series_name="xm", baudrate=bdrt, port_name="/dev/ttyUSB0")
+                series_name="xm", baudrate=bdrt, port_name="/dev/ttyUSB1")
         self.Servo2.begin_communication()
         self.Servo2.set_operating_mode("extended position")
 
         self.Servo3 = Dynamixel(dxl_ids[2], descriptive_device_name="XM430 test motor", 
-                series_name="xm", baudrate=bdrt, port_name="/dev/ttyUSB0")
+                series_name="xm", baudrate=bdrt, port_name="/dev/ttyUSB1")
         self.Servo3.begin_communication()
         self.Servo3.set_operating_mode("extended position")
 
