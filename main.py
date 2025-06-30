@@ -9,18 +9,15 @@ import keyboard
 import time
 import numpy as np
 
-STEP_SIZE_THETA = 0.007
-STEP_SIZE_PHI = 0.01
+STEP_SIZE_THETA = 0.01
+STEP_SIZE_PHI = 0.02
 DELAY = 0.05
 
 theta = 0
 phi = 0
 
-TARGET_VID = 6790
-TARGET_PID = 29987
-
 QuaternionJoint = QuaternionJointK()
-Encoders = AMT23_Encoder()
+
 # QuaternionJoint.qualibrate()
 
 print("=== Keyboard Velocity Control ===")
@@ -28,14 +25,11 @@ print("Use W/S to control Rotation x")
 print("Use A/D to control Rotation y")
 print("Use C to calibrate")
 
-Encoders.connect(TARGET_VID, TARGET_PID)
-
 try:
     while not keyboard.is_pressed("c"):
         pass
 
-    QuaternionJoint.qualibrate()
-    Encoders.calibrate()    
+    QuaternionJoint.qualibrate()   
 
     while True:
         if keyboard.is_pressed("q"):
@@ -71,17 +65,14 @@ try:
 
                 QuaternionJoint.rotate(theta=theta, phi=phi)
 
-                angle1, angle2 = Encoders.read_angle()
-                print("Angle 1 : ", np.rad2deg(angle1), "Angle 2 : ", np.rad2deg(angle2))
-
                 time.sleep(0.001)
     
 
         # Theta: W/S
         if keyboard.is_pressed("w"):
-            theta -= STEP_SIZE_THETA
-        elif keyboard.is_pressed("s"):
             theta += STEP_SIZE_THETA
+        elif keyboard.is_pressed("s"):
+            theta -= STEP_SIZE_THETA
 
         # Phi: A/Dq
         if keyboard.is_pressed("d"):
@@ -90,8 +81,9 @@ try:
             phi += STEP_SIZE_PHI
 
         QuaternionJoint.rotate(theta=theta, phi=phi)
-        angle1, angle2 = Encoders.read_angle()
-        print("Angle 1 : ", np.rad2deg(angle1), "Angle 2 : ", np.rad2deg(angle2))
+        measured_theta, measured_phi = QuaternionJoint.read_angles()
+        print("theta : ", np.rad2deg(theta), " phi : ", np.rad2deg(phi))
+        print("measured theta : ", np.rad2deg(measured_theta), " measured phi : ", np.rad2deg(measured_phi))
 
         time.sleep(0.001)
 

@@ -7,6 +7,7 @@ sys.path.insert(0, submodule_path)
 from time import sleep
 from dynamixel_controller import Dynamixel
 from QJ_geomerty import QJgeomerty
+from Encoder import AMT23_Encoder
 
 import keyboard
 import time
@@ -14,6 +15,9 @@ import numpy as np
 
 PULLEYDIAMETER = 20
 DYNAMIXELFULLROTATION = 4096
+
+TARGET_VID = 6790
+TARGET_PID = 29987
 
 CURRENT_LIMIT = 100
 
@@ -36,6 +40,9 @@ class QuaternionJointK:
                 series_name="xm", baudrate=bdrt, port_name="/dev/ttyUSB1")
         self.Servo3.begin_communication()
         self.Servo3.set_operating_mode("extended position")
+
+        self.encoders = AMT23_Encoder()
+        self.encoders.connect(TARGET_VID, TARGET_PID)
 
         self.QJG = QJgeomerty(tendons_width)
 
@@ -79,6 +86,8 @@ class QuaternionJointK:
 
                 if np.abs(self.Servo3.read_current()) >= CURRENT_LIMIT:
                     tendon_c_streched = True
+                    
+        self.encoders.calibrate() 
 
         self.qualibrated = True
 
@@ -95,16 +104,27 @@ class QuaternionJointK:
             print("Qualibrate first")
             return
         
-        da, db, dc = self.QJG.set_angle(theta=theta, phi=phi)
+        da, db, dc = self.QJG.set_angle(theta=theta, phi=phi-np.pi/2)
 
         self.Servo1.write_position(self.servo1_zero + self.mm2pos(da))
         self.Servo2.write_position(self.servo2_zero + self.mm2pos(db))
         self.Servo3.write_position(self.servo3_zero + self.mm2pos(dc))
 
         return
+    
+    def read_angles(self):
+        angle1, angle2 = self.encoders.read_angle()
+
+        theta, phi = self.QJG.compute_theta_phi(angle1=-2*angle1, angle1_pos=-np.pi*1/6, angle2=2*angle2, angle2_pos=np.pi*1/6)
+
+        return theta, phi
 
     def disable(self):
         
+        self.Servo1.disable_torque()
+        self.Servo2.disable_torque()
+        self.Servo3.disable_torque()
+
         self.Servo1.end_communication()
         self.Servo2.end_communication()
         self.Servo3.end_communication()
