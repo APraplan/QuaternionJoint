@@ -1,6 +1,10 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
+import keyboard
+
+STEP_SIZE = 0.01
+DELAY = 0.05
 
 class QJgeomerty:
     def __init__(self, width):
@@ -78,26 +82,26 @@ class QJgeomerty:
         self.ax.clear()
 
         v1 = np.array([1, 0, 0], dtype=float)
-        self.ax.quiver(0, 0, 0, 2, 0, 0, color='red', label='x_axis')
-        # self.ax.quiver(0, 0, 0, 0, 2, 0, color='red', label='y_axis')
-        # self.ax.quiver(0, 0, 0, 0, 0, 2, color='red', label='z_axis')
+        self.ax.quiver(0, 0, 0, 0.5, 0, 0, color='red', label='x_axis')
+        self.ax.quiver(0, 0, 0, 0, 0.5, 0, color='blue', label='y_axis')
+        self.ax.quiver(0, 0, 0, 0, 0, 0.5, color='green', label='z_axis')
         r_v1 = v1.copy()
         v2 = np.array([1, 0, 0], dtype=float)
         # ax.quiver(0, 0, 0, v2[0], v2[1], v2[2], color='red', label='v2_1')
         r_v2 = v2.copy()
         z_axis = np.array([0, 0, 1], dtype=float)
 
-        v1 = self.rotate_vector(v1, z_axis, angle1_pos)
+        v1 = self.rotate_vector(v1, z_axis, angle1_pos + np.pi/2)
         self.ax.quiver(0, 0, 0, v1[0], v1[1], v1[2], color='green', label='v1_proj')
-        r_v1 = self.rotate_vector(r_v1, z_axis, angle1_pos - np.pi / 2)
+        r_v1 = self.rotate_vector(r_v1, z_axis, angle1_pos)
         # ax.quiver(0, 0, 0, r_v1[0], r_v1[1], r_v1[2], color='yellow', label='r_v1')
         v1 = self.rotate_vector(v1, r_v1, angle1)
         # ax.quiver(0, 0, 0, v1[0], v1[1], v1[2], color='blue', label='v1_3')
 
 
-        v2 = self.rotate_vector(v2, z_axis, angle2_pos)
+        v2 = self.rotate_vector(v2, z_axis, angle2_pos + np.pi/2)
         self.ax.quiver(0, 0, 0, v2[0], v2[1], v2[2], color='green', label='v2_proj')
-        r_v2 = self.rotate_vector(r_v2, z_axis, angle2_pos - np.pi / 2)
+        r_v2 = self.rotate_vector(r_v2, z_axis, angle2_pos)
         # ax.quiver(0, 0, 0, r_v2[0], r_v2[1], r_v2[2], color='yellow', label='r_v2')
         v2 = self.rotate_vector(v2, r_v2, angle2)
         # ax.quiver(0, 0, 0, v2[0], v2[1], v2[2], color='blue', label='v2_3')
@@ -128,4 +132,30 @@ class QJgeomerty:
         plt.pause(0.0001)
 
         return theta, phi
+    
+
+if __name__ == "__main__":
+    qj = QJgeomerty(width=50)
+
+    angle1 = 0
+    angle2 = 0
+
+    while True:
+
+        if keyboard.is_pressed("w"):
+            angle1 += STEP_SIZE
+        elif keyboard.is_pressed("s"):
+            angle1 -= STEP_SIZE
+        elif keyboard.is_pressed("d"):
+            angle2 += STEP_SIZE
+        elif keyboard.is_pressed("a"):
+            angle2 -= STEP_SIZE
+
+        print("angle1 : ", np.rad2deg(angle1), " angle2 : ", np.rad2deg(angle2))
+
+        theta, phi = qj.compute_theta_phi(angle1=2*angle1, angle1_pos=np.deg2rad(60), angle2=2*angle2, angle2_pos=np.deg2rad(180))
+        
+        print("theta : ", np.rad2deg(theta), " phi : ", np.rad2deg(phi))
+
+        # plt.show()
         

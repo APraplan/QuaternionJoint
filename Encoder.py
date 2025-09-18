@@ -82,3 +82,21 @@ class AMT23_Encoder():
         self.ser.close()
 
         return
+    
+
+if __name__ == "__main__":
+    encoder = AMT23_Encoder()
+    encoder.connect(vid=TARGET_VID, pid=TARGET_PID)
+
+    if encoder.ser is None:
+        print("Could not connect to the encoder")
+    else:
+        print("Connected to the encoder")
+
+        encoder.calibrate()
+
+        while True:
+            angle1, angle2 = encoder.read_angle()
+            print("angle1 : ", np.rad2deg(angle1), " angle2 : ", np.rad2deg(angle2))
+        
+        encoder.disconect()
