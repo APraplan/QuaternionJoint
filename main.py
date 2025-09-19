@@ -9,8 +9,8 @@ import keyboard
 import time
 import numpy as np
 
-STEP_SIZE_THETA = 0.01
-STEP_SIZE_PHI = 0.02
+STEP_SIZE_THETA = 0.005
+STEP_SIZE_PHI = 0.01
 DELAY = 0.05
 
 theta = 0
@@ -25,47 +25,52 @@ print("Use W/S to control Rotation x")
 print("Use A/D to control Rotation y")
 print("Use C to calibrate")
 
-try:
-    while not keyboard.is_pressed("c"):
-        pass
 
-    QuaternionJoint.qualibrate()   
+while not keyboard.is_pressed("c"):
+    pass
 
-    while True:
+QuaternionJoint.qualibrate()   
+
+while True:
+    
+    start_time = time.time()
+    for i in range(100):
+
         if keyboard.is_pressed("q"):
             print("Exiting...")
-            break
+            QuaternionJoint.disable()
+            exit(0)
 
-        if keyboard.is_pressed("k"):
-            print("Demo started")
+        # if keyboard.is_pressed("k"):
+        #     print("Demo started")
 
-            ROTATION_PERIOD_YAW = 600
-            OSC_PERIOD = 150
-            TWO_PI = 2*np.pi
-            PITCH_OSC_MID = 0.96
-            PITCH_OSC_AMP = 0.34
+        #     ROTATION_PERIOD_YAW = 600
+        #     OSC_PERIOD = 150
+        #     TWO_PI = 2*np.pi
+        #     PITCH_OSC_MID = 0.96
+        #     PITCH_OSC_AMP = 0.34
 
-            osc_omega = TWO_PI / OSC_PERIOD
-            rotation_speed = TWO_PI / ROTATION_PERIOD_YAW
+        #     osc_omega = TWO_PI / OSC_PERIOD
+        #     rotation_speed = TWO_PI / ROTATION_PERIOD_YAW
             
-            start_time = time.time()
+        #     start_time = time.time()
 
             
 
-            while True:
+        #     while True:
 
-                if keyboard.is_pressed("q"):
-                    break
+        #         if keyboard.is_pressed("q"):
+        #             break
 
-                current_time = time.time() - start_time
+        #         current_time = time.time() - start_time
 
-                phi = (rotation_speed * current_time) % TWO_PI
+        #         phi = (rotation_speed * current_time) % TWO_PI
     
-                theta = PITCH_OSC_MID + PITCH_OSC_AMP * np.sin(osc_omega * current_time)
+        #         theta = PITCH_OSC_MID + PITCH_OSC_AMP * np.sin(osc_omega * current_time)
 
-                QuaternionJoint.rotate(theta=theta, phi=phi)
+        #         QuaternionJoint.rotate(theta=theta, phi=phi)
 
-                time.sleep(0.001)
+        #         time.sleep(0.001)
     
 
         # Theta: W/S
@@ -80,12 +85,14 @@ try:
         elif keyboard.is_pressed("a"):
             phi += STEP_SIZE_PHI
 
-        QuaternionJoint.rotate(theta=theta, phi=phi)
         measured_theta, measured_phi = QuaternionJoint.read_angles()
-        print("theta : ", np.rad2deg(theta), " phi : ", np.rad2deg(phi))
-        print("measured theta : ", np.rad2deg(measured_theta), " measured phi : ", np.rad2deg(measured_phi))
+        # measured_theta, measured_phi = 0, 0
 
-        time.sleep(0.001)
+        QuaternionJoint.rotate(target_theta=theta, target_phi=phi, measured_theta=measured_theta, measured_phi=measured_phi)
 
-finally:
-    QuaternionJoint.disable()
+    # print("theta : ", np.rad2deg(theta), " phi : ", np.rad2deg(phi))
+    # print("measured theta : ", np.rad2deg(measured_theta), " measured phi : ", np.rad2deg(measured_phi))
+
+    # end_time = time.time()
+    # print("Frequency: ", 100/(end_time-start_time), " Hz")
+

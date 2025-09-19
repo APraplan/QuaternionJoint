@@ -82,9 +82,9 @@ class QJgeomerty:
         self.ax.clear()
 
         v1 = np.array([1, 0, 0], dtype=float)
-        self.ax.quiver(0, 0, 0, 0.5, 0, 0, color='red', label='x_axis')
-        self.ax.quiver(0, 0, 0, 0, 0.5, 0, color='blue', label='y_axis')
-        self.ax.quiver(0, 0, 0, 0, 0, 0.5, color='green', label='z_axis')
+        # self.ax.quiver(0, 0, 0, 0.5, 0, 0, color='red', label='x_axis')
+        # self.ax.quiver(0, 0, 0, 0, 0.5, 0, color='blue', label='y_axis')
+        # self.ax.quiver(0, 0, 0, 0, 0, 0.5, color='green', label='z_axis')
         r_v1 = v1.copy()
         v2 = np.array([1, 0, 0], dtype=float)
         # ax.quiver(0, 0, 0, v2[0], v2[1], v2[2], color='red', label='v2_1')
@@ -92,7 +92,7 @@ class QJgeomerty:
         z_axis = np.array([0, 0, 1], dtype=float)
 
         v1 = self.rotate_vector(v1, z_axis, angle1_pos + np.pi/2)
-        self.ax.quiver(0, 0, 0, v1[0], v1[1], v1[2], color='green', label='v1_proj')
+        # self.ax.quiver(0, 0, 0, v1[0], v1[1], v1[2], color='green', label='v1_proj')
         r_v1 = self.rotate_vector(r_v1, z_axis, angle1_pos)
         # ax.quiver(0, 0, 0, r_v1[0], r_v1[1], r_v1[2], color='yellow', label='r_v1')
         v1 = self.rotate_vector(v1, r_v1, angle1)
@@ -100,7 +100,7 @@ class QJgeomerty:
 
 
         v2 = self.rotate_vector(v2, z_axis, angle2_pos + np.pi/2)
-        self.ax.quiver(0, 0, 0, v2[0], v2[1], v2[2], color='green', label='v2_proj')
+        # self.ax.quiver(0, 0, 0, v2[0], v2[1], v2[2], color='green', label='v2_proj')
         r_v2 = self.rotate_vector(r_v2, z_axis, angle2_pos)
         # ax.quiver(0, 0, 0, r_v2[0], r_v2[1], r_v2[2], color='yellow', label='r_v2')
         v2 = self.rotate_vector(v2, r_v2, angle2)
@@ -112,24 +112,24 @@ class QJgeomerty:
         theta = np.arccos(np.clip(np.dot(n, z_axis), -1.0, 1.0))
         phi = np.arctan2(h[1], h[0])
 
-        # # v1 (blue), v2 (red), h (purple)
-        self.ax.quiver(0, 0, 0, v1[0], v1[1], v1[2], color='blue', label='v1')
-        self.ax.quiver(0, 0, 0, v2[0], v2[1], v2[2], color='blue', label='v2')
-        self.ax.quiver(0, 0, 0, h[0], h[1], h[2], color='purple', label='h (intersection dir)')
-        self.ax.quiver(0, 0, 0, n[0], n[1], n[2], color='orange', label='n (normal)')
+        # # # v1 (blue), v2 (red), h (purple)
+        # self.ax.quiver(0, 0, 0, v1[0], v1[1], v1[2], color='blue', label='v1')
+        # self.ax.quiver(0, 0, 0, v2[0], v2[1], v2[2], color='blue', label='v2')
+        # self.ax.quiver(0, 0, 0, h[0], h[1], h[2], color='purple', label='h (intersection dir)')
+        # self.ax.quiver(0, 0, 0, n[0], n[1], n[2], color='orange', label='n (normal)')
 
-        # Axes setup
-        self.ax.set_xlim([-1.5, 1.5])
-        self.ax.set_ylim([-1.5, 1.5])
-        self.ax.set_zlim([-1.5, 1.5])
-        self.ax.set_xlabel('X')
-        self.ax.set_ylabel('Y')
-        self.ax.set_zlabel('Z')
-        self.ax.set_title('Vectors v1, v2, and h')
-        self.ax.legend()
-        plt.tight_layout()
-        plt.draw()
-        plt.pause(0.0001)
+        # # Axes setup
+        # self.ax.set_xlim([-1.5, 1.5])
+        # self.ax.set_ylim([-1.5, 1.5])
+        # self.ax.set_zlim([-1.5, 1.5])
+        # self.ax.set_xlabel('X')
+        # self.ax.set_ylabel('Y')
+        # self.ax.set_zlabel('Z')
+        # self.ax.set_title('Vectors v1, v2, and h')
+        # self.ax.legend()
+        # plt.tight_layout()
+        # plt.draw()
+        # plt.pause(0.0001)
 
         return theta, phi
     
