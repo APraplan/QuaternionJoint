@@ -15,7 +15,7 @@ class AMT23_Encoder():
 
         self.calibrated = True
         
-        self.encoder1_zero = 2360
+        self.encoder1_zero = 2340
         self.encoder2_zero = 2370
 
     def connect(self, vid, pid):
@@ -60,13 +60,13 @@ class AMT23_Encoder():
             value1, value2 = struct.unpack('<HH', data)
             return value1, value2
 
-    def calibrate(self):
-        self.read_position()
-        self.encoder1_zero, self.encoder2_zero = self.read_position()
-        self.calibrated = True
-        print("Encoder calibrated")
+    # def calibrate(self):
+    #     self.encoder1_zero, self.encoder2_zero = self.read_position()
+    #     self.calibrated = True
+    #     print("Positions read: ", self.encoder1_zero, self.encoder2_zero)
+    #     print("Encoder calibrated")
 
-        return
+    #     return
     
     def read_angle(self):
         if not self.calibrated:
@@ -94,9 +94,9 @@ if __name__ == "__main__":
     else:
         print("Connected to the encoder")
 
-        encoder.calibrate()
 
         while True:
+            # print("Positions read: ", encoder.read_position())
             angle1, angle2 = encoder.read_angle()
             print("angle1 : ", np.rad2deg(angle1), " angle2 : ", np.rad2deg(angle2))
         
