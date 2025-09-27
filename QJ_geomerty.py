@@ -2,12 +2,13 @@ import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 import keyboard
+import time
 
 STEP_SIZE = 0.01
 DELAY = 0.05
 
 class QJgeomerty:
-    def __init__(self, width):
+    def __init__(self, width, angle1_pos=np.deg2rad(60), angle2_pos=np.deg2rad(180)):
         self.theta = 0
         self.phi = 0
 
@@ -19,6 +20,12 @@ class QJgeomerty:
 
         self.fig = plt.figure()
         self.ax = self.fig.add_subplot(111, projection='3d')
+
+        z_axis = np.array([0, 0, 1], dtype=float)
+        self.encoder1_axis = self.rotate_vector(np.array([1, 0, 0], dtype=float), z_axis, angle1_pos)
+        self.encoder2_axis = self.rotate_vector(np.array([1, 0, 0], dtype=float), z_axis, angle2_pos)
+        self.encoder1_v = self.rotate_vector(self.encoder1_axis, z_axis, np.pi/2)
+        self.encoder2_v = self.rotate_vector(self.encoder2_axis, z_axis, np.pi/2)
 
     def read_angle(self):
         return self.theta, self.phi
@@ -46,6 +53,11 @@ class QJgeomerty:
         return (v * cos_theta +
                 np.cross(a, v) * sin_theta +
                 a * np.dot(a, v) * (1 - cos_theta))
+    
+    def rotate_vector_fast(self, v, a, angle):
+        cos_theta = np.cos(angle)
+        sin_theta = np.sin(angle)
+        return (v * cos_theta + np.cross(a, v) * sin_theta + a * np.dot(a, v) * (1 - cos_theta))
 
     def extract_theta_phi(self, v1, v2):
         """
@@ -77,31 +89,35 @@ class QJgeomerty:
 
         return n_unit, h
     
-    def compute_theta_phi(self, angle1, angle1_pos, angle2, angle2_pos):
+    def extract_theta_phi_fast(self, v1, v2):
+        """
+        Given two 3D vectors, computes:
+        - The vector `h`: direction of the intersection line between the plane formed by v1 & v2 and the XY plane.
+        - The angle between the plane's normal and the Z-axis.
+        """
 
-        self.ax.clear()
+        # Normal vector
+        n = np.cross(v1, v2)
+        n_unit = n/np.linalg.norm(n)
 
-        v1 = np.array([1, 0, 0], dtype=float)
-        r_v1 = v1.copy()
-        v2 = np.array([1, 0, 0], dtype=float)
-        r_v2 = v2.copy()
-        z_axis = np.array([0, 0, 1], dtype=float)
+        # Intersection line
+        h = np.cross(n, np.array([0.0, 0.0, 1.0]))
 
-        v1 = self.rotate_vector(v1, z_axis, angle1_pos + np.pi/2)
-        self.ax.quiver(0, 0, 0, v1[0], v1[1], v1[2], color='green', label='v1_proj')
-        r_v1 = self.rotate_vector(r_v1, z_axis, angle1_pos)
-        v1 = self.rotate_vector(v1, r_v1, angle1)
+        # Singularity
+        if np.linalg.norm(h) < 1e-8:
+            h = np.array([1.0, 0.0, 0.0])  # Default direction if plane is parallel to XY
 
-
-        v2 = self.rotate_vector(v2, z_axis, angle2_pos + np.pi/2)
-        self.ax.quiver(0, 0, 0, v2[0], v2[1], v2[2], color='green', label='v2_proj')
-        r_v2 = self.rotate_vector(r_v2, z_axis, angle2_pos)
-        v2 = self.rotate_vector(v2, r_v2, angle2)
+        return n_unit, h
+    
+    def compute_theta_phi(self, angle1, angle2):
 
 
-        n, h = self.extract_theta_phi(v1, v2)
+        v1 = self.rotate_vector_fast(self.encoder1_v, self.encoder1_axis, angle1)
+        v2 = self.rotate_vector_fast(self.encoder2_v, self.encoder2_axis, angle2)
 
-        theta = np.arccos(np.clip(np.dot(n, z_axis), -1.0, 1.0))
+        n, h = self.extract_theta_phi_fast(v1, v2)
+
+        theta = np.arccos(np.clip(np.dot(n, np.array([0, 0, 1])), -1.0, 1.0))
         phi = np.arctan2(h[1], h[0])
 
         return theta, phi
@@ -172,12 +188,11 @@ class QJgeomerty:
         self.ax.quiver(0, 0, 0, 0, 0, 0.5, color='green', label='z_axis')
         r_v1 = v1.copy()
         v2 = np.array([1, 0, 0], dtype=float)
-        self.ax.quiver(0, 0, 0, v2[0], v2[1], v2[2], color='red', label='v2_1')
+        # self.ax.quiver(0, 0, 0, v2[0], v2[1], v2[2], color='red', label='v2_1')
         r_v2 = v2.copy()
         z_axis = np.array([0, 0, 1], dtype=float)
 
         v1 = self.rotate_vector(v1, z_axis, angle1_pos + np.pi/2)
-        self.ax.quiver(0, 0, 0, v1[0], v1[1], v1[2], color='green', label='v1_proj')
         r_v1 = self.rotate_vector(r_v1, z_axis, angle1_pos)
         self.ax.quiver(0, 0, 0, r_v1[0], r_v1[1], r_v1[2], color='yellow', label='r_v1')
         v1 = self.rotate_vector(v1, r_v1, angle1)
@@ -185,11 +200,22 @@ class QJgeomerty:
 
 
         v2 = self.rotate_vector(v2, z_axis, angle2_pos + np.pi/2)
-        self.ax.quiver(0, 0, 0, v2[0], v2[1], v2[2], color='green', label='v2_proj')
         r_v2 = self.rotate_vector(r_v2, z_axis, angle2_pos)
         self.ax.quiver(0, 0, 0, r_v2[0], r_v2[1], r_v2[2], color='yellow', label='r_v2')
         v2 = self.rotate_vector(v2, r_v2, angle2)
         self.ax.quiver(0, 0, 0, v2[0], v2[1], v2[2], color='blue', label='v2_3')
+
+        n = np.cross(v1, v2)
+        self.ax.quiver(0, 0, 0, n[0], n[1], n[2], color='orange', label='n (normal)')
+
+        v_rx = np.cross(n, np.array([1, 0, 0], dtype=float))
+        self.ax.quiver(0, 0, 0, v_rx[0], v_rx[1], v_rx[2], color='purple', label='rx')
+
+        v_ry = np.cross(np.array([0, 1, 0], dtype=float), n)
+        self.ax.quiver(0, 0, 0, v_ry[0], v_ry[1], v_ry[2], color='brown', label='ry')
+
+        rx = np.arctan2(v_rx[2], v_rx[1])
+        ry = - np.arctan2(v_ry[2], v_ry[0])
 
         # Axes setup
         self.ax.set_xlim([-1.5, 1.5])
@@ -198,13 +224,56 @@ class QJgeomerty:
         self.ax.set_xlabel('X')
         self.ax.set_ylabel('Y')
         self.ax.set_zlabel('Z')
-        self.ax.set_title('Vectors v1, v2')
+        self.ax.set_title('Vectors v1, v2, and n')
         self.ax.legend()
         plt.tight_layout()
         plt.draw()
         plt.pause(0.0001)
 
-        return 0, 0
+        return rx, ry
+    
+    def compute_rx_ry(self, angle1, angle2):
+
+        
+        v1 = self.rotate_vector_fast(self.encoder1_v, self.encoder1_axis, angle1)
+        v2 = self.rotate_vector_fast(self.encoder2_v, self.encoder2_axis, angle2)
+
+        n = np.cross(v1, v2)
+        
+        v_rx = np.cross(n, np.array([1, 0, 0], dtype=float))
+        v_ry = np.cross(np.array([0, 1, 0], dtype=float), n)
+        
+        rx = np.arctan2(v_rx[2], v_rx[1])
+        ry = - np.arctan2(v_ry[2], v_ry[0])
+
+        # self.ax.clear()
+        # self.ax.quiver(0, 0, 0, 0.5, 0, 0, color='red', label='x_axis')
+        # self.ax.quiver(0, 0, 0, 0, 0.5, 0, color='blue', label='y_axis')
+        # self.ax.quiver(0, 0, 0, 0, 0, 0.5, color='green', label='z_axis')
+        # self.ax.quiver(0, 0, 0, v1[0], v1[1], v1[2], color='blue', label='v1')
+        # self.ax.quiver(0, 0, 0, v2[0], v2[1], v2[2], color='blue', label='v2')
+
+        # self.ax.quiver(0, 0, 0, n[0], n[1], n[2], color='orange', label='n (normal)')
+
+        # self.ax.quiver(0, 0, 0, v_rx[0], v_rx[1], v_rx[2], color='purple', label='rx')
+
+        # self.ax.quiver(0, 0, 0, v_ry[0], v_ry[1], v_ry[2], color='brown', label='ry')
+
+        # # Axes setup
+        # self.ax.set_xlim([-1.5, 1.5])
+        # self.ax.set_ylim([-1.5, 1.5])
+        # self.ax.set_zlim([-1.5, 1.5])
+        # self.ax.set_xlabel('X')
+        # self.ax.set_ylabel('Y')
+        # self.ax.set_zlabel('Z')
+        # self.ax.set_title('Vectors v1, v2, and n')
+        # self.ax.legend()
+        # plt.tight_layout()
+        # plt.draw()
+        # plt.pause(0.0001)
+
+        return rx, ry
+    
     
 
 if __name__ == "__main__":
@@ -224,11 +293,28 @@ if __name__ == "__main__":
         if keyboard.is_pressed("a"):
             angle2 -= STEP_SIZE
 
-        print("angle1 : ", np.rad2deg(angle1), " angle2 : ", np.rad2deg(angle2))
+        # print("angle1 : ", np.rad2deg(angle1), " angle2 : ", np.rad2deg(angle2))
 
-        theta, phi = qj.compute_rx_ry_dysplay(angle1=2*angle1, angle1_pos=np.deg2rad(60), angle2=2*angle2, angle2_pos=np.deg2rad(180))
+        # theta, phi = qj.compute_theta_phi_dysplay(angle1=2*angle1, angle1_pos=np.deg2rad(60), angle2=2*angle2, angle2_pos=np.deg2rad(180))
+
+        # print("theta : ", np.rad2deg(theta), " phi : ", np.rad2deg(phi))
+
+        rx, ry = qj.compute_rx_ry_dysplay(angle1=2*angle1, angle1_pos=np.deg2rad(60), angle2=2*angle2, angle2_pos=np.deg2rad(180))
+
+        print("rx : ", np.rad2deg(rx), " ry : ", np.rad2deg(ry))
+
+        t1 = time.time()
+        theta, phi = qj.compute_theta_phi(angle1=2*angle1, angle2=2*angle2)
+        t2 = time.time()
+        rx, ry = qj.compute_rx_ry(angle1=2*angle1, angle2=2*angle2)
+        t3 = time.time()
+
+        # print("Fast theta : ", np.rad2deg(theta), " Fast phi : ", np.rad2deg(phi))
+        print("Fast rx : ", np.rad2deg(rx), " Fast ry : ", np.rad2deg(ry))
+
+        # print("Execution time us: ", (t2-t1)*1000000, ", ", (t3-t2)*1000000)
+
+
         
-        print("theta : ", np.rad2deg(theta), " phi : ", np.rad2deg(phi))
 
-        # plt.show()
         
