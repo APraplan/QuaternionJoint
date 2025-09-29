@@ -27,10 +27,25 @@ class QuaternionJoint:
     def read_angles(self):
         angle1, angle2 = self.encoders.read_angle()
 
-        theta, phi = self.QJG.compute_theta_phi(angle1=2*angle1, angle1_pos=np.deg2rad(60), angle2=2*angle2, angle2_pos=np.deg2rad(180))
+        theta, phi = self.QJG.compute_theta_phi(angle1=2*angle1, angle2=2*angle2)
 
         phi = (phi + np.pi/2)%(2*np.pi)
 
         return theta, phi
+    
+    def read_rx_ry(self):
+        angle1, angle2 = self.encoders.read_angle()
+        
+        rx, ry = self.QJG.compute_rx_ry(angle1=2*angle1, angle2=2*angle2)
+
+        return rx, ry
+    
+if __name__ == "__main__":
+    QJ = QuaternionJoint()
+
+    while True:
+        rx, ry = QJ.read_rx_ry()
+
+        print("Rx: ", rx, " Ry: ", ry)
 
     
