@@ -43,9 +43,15 @@ class QuaternionJoint:
 if __name__ == "__main__":
     QJ = QuaternionJoint()
 
-    while True:
-        rx, ry = QJ.read_rx_ry()
+    # while True:
+    #     rx, ry = QJ.read_rx_ry()
 
-        print("Rx: ", rx, " Ry: ", ry)
+    #     print("Rx: ", np.round(np.rad2deg(rx), 2), " Ry: ", np.round(np.rad2deg(ry), 2))
+
+    while True:
+
+        theta, phi = QJ.read_angles()
+
+        print("Theta: ", np.round(np.rad2deg(theta), 2), " Phi: ", np.round(np.rad2deg(phi), 2))
 
     
