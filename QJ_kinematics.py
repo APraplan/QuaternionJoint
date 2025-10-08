@@ -28,7 +28,7 @@ KD = 0.0
 
 
 class QuaternionJointK:
-    def __init__(self, dxl_ids = [2, 3, 1], bdrt = 57600, tendons_width = 75):
+    def __init__(self, dxl_ids = [2, 1, 3], bdrt = 57600, tendons_width = 75):
 
         port = "/dev/ttyUSB1"
 

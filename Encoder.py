@@ -15,7 +15,7 @@ class AMT23_Encoder():
 
         self.calibrated = True
         
-        self.encoder1_zero = 1502
+        self.encoder1_zero = 670
         self.encoder2_zero = 2496
 
     def connect(self, vid, pid):
@@ -96,8 +96,8 @@ if __name__ == "__main__":
 
 
         while True:
-            # print("Positions read: ", encoder.read_position())
+            print("Positions read: ", encoder.read_position())
             angle1, angle2 = encoder.read_angle()
-            print("angle1 : ", np.rad2deg(angle1), " angle2 : ", np.rad2deg(angle2))
+            # print("angle1 : ", np.rad2deg(angle1), " angle2 : ", np.rad2deg(angle2))
         
         encoder.disconect()

@@ -15,6 +15,7 @@ class QJgeomerty:
         self.da = 0
         self.db = 0
         self.dc = 0
+        self.damping = 0.005
 
         self.width = width
 
@@ -30,16 +31,89 @@ class QJgeomerty:
     def read_angle(self):
         return self.theta, self.phi
     
-    def set_angle(self, theta, phi):
+    def tendons_lengths_tp(self, theta, phi):
         self.theta = theta
         self.phi = phi
 
         self.da = 2*self.width*np.sin(self.theta/2)*np.cos(self.phi)
-        self.db = 2*self.width*np.sin(self.theta/2)*np.cos(self.phi + (2/3 * np.pi))
-        self.dc = 2*self.width*np.sin(self.theta/2)*np.cos(self.phi+ (4/3 * np.pi))
+        self.db = 2*self.width*np.sin(self.theta/2)*np.cos(self.phi - (2/3 * np.pi))
+        self.dc = 2*self.width*np.sin(self.theta/2)*np.cos(self.phi - (4/3 * np.pi))
 
 
         return self.da, self.db, self.dc
+    
+    def tendons_lengths_rr(self, rx, ry):
+
+        pa = np.radians(0)
+        pb = np.radians(-120)
+        pc = np.radians(-240)
+        
+        # da = 2*(np.sin(rx/2)*np.sin(pa) + np.sin(ry/2)*np.cos(pa))*self.width
+        da = 2*self.width*(np.cos(rx/2)*np.sin(ry/2)*np.cos(pa) + np.sin(rx/2)*np.cos(ry/2)*np.sin(pa)) / np.sqrt(np.cos(rx/2)**2 * np.sin(ry/2)**2 + np.cos(ry/2)**2)
+        db = 2*self.width*(np.cos(rx/2)*np.sin(ry/2)*np.cos(pb) + np.sin(rx/2)*np.cos(ry/2)*np.sin(pb)) / np.sqrt(np.cos(rx/2)**2 * np.sin(ry/2)**2 + np.cos(ry/2)**2)
+        dc = 2*self.width*(np.cos(rx/2)*np.sin(ry/2)*np.cos(pc) + np.sin(rx/2)*np.cos(ry/2)*np.sin(pc)) / np.sqrt(np.cos(rx/2)**2 * np.sin(ry/2)**2 + np.cos(ry/2)**2)
+
+        return da, db, dc
+    
+
+    def partial(self, rx, ry, pa):
+        # Precompute sines and cosines
+        cos_rx2 = np.cos(rx / 2)
+        sin_rx2 = np.sin(rx / 2)
+        cos_ry2 = np.cos(ry / 2)
+        sin_ry2 = np.sin(ry / 2)
+        w=self.width
+
+        # Numerator and denominator
+        N = cos_rx2 * sin_ry2 * np.cos(pa) + sin_rx2 * cos_ry2 * np.sin(pa)
+        D = np.sqrt(cos_rx2**2 * sin_ry2**2 + cos_ry2**2)
+
+        # Derivatives of numerator
+        dN_drx = -0.5 * sin_rx2 * sin_ry2 * np.cos(pa) + 0.5 * cos_rx2 * cos_ry2 * np.sin(pa)
+        dN_dry = 0.5 * cos_rx2 * cos_ry2 * np.cos(pa) - 0.5 * sin_rx2 * sin_ry2 * np.sin(pa)
+
+        # Derivatives of denominator
+        dD_drx = -0.5 * sin_rx2 * cos_rx2 * sin_ry2**2 / D
+        dD_dry = 0.5 * sin_ry2 * cos_ry2 * (cos_rx2**2 - 1) / D  # simplifies to -0.5 * sin_ry2 * cos_ry2 * sin_rx2**2 / D
+
+        # Partial derivatives of a
+        da_drx = 2 * w * (dN_drx * D - N * dD_drx) / D**2
+        da_dry = 2 * w * (dN_dry * D - N * dD_dry) / D**2
+
+        return da_drx, da_dry
+    
+
+    def jacobian_RR(self, rx, ry):
+
+        pa = np.radians(0)
+        pb = np.radians(-120)
+        pc = np.radians(-240)
+
+        da_dx, da_dy = self.partial(rx, ry, pa)
+        db_dx, db_dy = self.partial(rx, ry, pb)
+        dc_dx, dc_dy = self.partial(rx, ry, pc)
+
+        # Jacobian matrix
+        J = np.array([
+            [da_dx, da_dy],
+            [db_dx, db_dy],
+            [dc_dx, dc_dy]
+        ])
+        return J
+
+    def jacobian_tp(self, theta, phi):
+
+        q = np.array([theta, phi])
+        
+        da_dtheta = self.width * np.cos(q[0]/2) * np.cos(q[1])
+        da_dphi   = -2 * self.width * np.sin(q[0]/2) * np.sin(q[1])
+        db_dtheta = self.width * np.cos(q[0]/2) * np.cos(q[1] - 2*np.pi/3)
+        db_dphi   = -2 * self.width * np.sin(q[0]/2) * np.sin(q[1] - 2*np.pi/3)
+        dc_dtheta = self.width * np.cos(q[0]/2) * np.cos(q[1] - 4*np.pi/3)
+        dc_dphi   = -2 * self.width * np.sin(q[0]/2) * np.sin(q[1] - 4*np.pi/3)
+
+        return np.array([[da_dtheta, da_dphi], [db_dtheta, db_dphi], [dc_dtheta, dc_dphi]])
+
     
     def read_tendons_d(self):
         return self.da, self.db, self.dc
@@ -119,6 +193,8 @@ class QJgeomerty:
 
         theta = np.arccos(np.clip(np.dot(n, np.array([0, 0, 1])), -1.0, 1.0))
         phi = np.arctan2(h[1], h[0])
+
+        phi = (phi + np.pi/2) % (2 * np.pi)
 
         return theta, phi
 
@@ -275,12 +351,23 @@ class QJgeomerty:
         return rx, ry
     
     
+    def angle_wrap(self, e):
+        return (e + np.pi) % (2 * np.pi) - np.pi
+    
+    def damped_least_square_inverse(self, J, tau_des):
+        JT = J.T
+        tau_vec = tau_des.reshape(2,1)
+        f_pinv = np.linalg.inv(J @ J.T + self.damping * np.eye(J.shape[0])) @ J @ tau_vec
+
+        return f_pinv.flatten()
 
 if __name__ == "__main__":
     qj = QJgeomerty(width=50)
 
     angle1 = 0
     angle2 = 0
+
+    q_des = np.array([0, 0])
 
     while True:
 
@@ -300,19 +387,44 @@ if __name__ == "__main__":
         # print("theta : ", np.rad2deg(theta), " phi : ", np.rad2deg(phi))
 
         rx, ry = qj.compute_rx_ry_dysplay(angle1=2*angle1, angle1_pos=np.deg2rad(60), angle2=2*angle2, angle2_pos=np.deg2rad(180))
+        q_rr = np.array([rx, ry])
 
         print("rx : ", np.rad2deg(rx), " ry : ", np.rad2deg(ry))
 
-        t1 = time.time()
+        # t1 = time.time()
         theta, phi = qj.compute_theta_phi(angle1=2*angle1, angle2=2*angle2)
-        t2 = time.time()
-        rx, ry = qj.compute_rx_ry(angle1=2*angle1, angle2=2*angle2)
-        t3 = time.time()
+        q_tp = np.array([theta, phi])
+  
+        # t2 = time.time()
+        # # rx, ry = qj.compute_rx_ry(angle1=2*angle1, angle2=2*angle2)
+        # t3 = time.time()
 
-        # print("Fast theta : ", np.rad2deg(theta), " Fast phi : ", np.rad2deg(phi))
-        print("Fast rx : ", np.rad2deg(rx), " Fast ry : ", np.rad2deg(ry))
+        # # print("Fast theta : ", np.rad2deg(theta), " Fast phi : ", np.rad2deg(phi))
+        # # print("Fast rx : ", np.rad2deg(rx), " Fast ry : ", np.rad2deg(ry))
 
-        # print("Execution time us: ", (t2-t1)*1000000, ", ", (t3-t2)*1000000)
+        # # print("Execution time us: ", (t2-t1)*1000000, ", ", (t3-t2)*1000000)
+
+        # datp, dbtp, dctp = qj.tendons_lengths_tp(theta, phi)
+        # darr, dbrr, dcrr = qj.tendons_lengths_rr(rx, ry)
+        JRR = qj.jacobian_RR(rx, ry)
+        JTP = qj.jacobian_tp(theta, phi)
+
+        # print("Tendon lengths theta phi: ", datp, " ", dbtp, " ", dctp)
+        # print("Tendon lengths rx ry: ", darr, " ", dbrr, " ", dcrr)
+        # print("JRR: ", JRR)
+        # print("JTP: ", JTP)
+
+        e_rr = qj.angle_wrap(q_des-q_rr)
+        e_tp = qj.angle_wrap(q_des-q_tp)
+
+
+        f_rr = qj.damped_least_square_inverse(JRR, e_rr)
+        f_tp = qj.damped_least_square_inverse(JTP, e_tp)
+
+        print("f_rr: ", f_rr)
+        print("f_tp: ", f_tp)
+
+        time.sleep(0.1)
 
 
         
