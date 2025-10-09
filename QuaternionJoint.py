@@ -36,7 +36,7 @@ class QuaternionJoint:
     def read_rx_ry(self):
         angle1, angle2 = self.encoders.read_angle()
         
-        rx, ry = self.QJG.compute_rx_ry(angle1=2*angle1, angle2=2*angle2)
+        rx, ry = self.QJG.compute_rx_ry(angle1=angle1, angle2=angle2)
 
         return rx, ry
     

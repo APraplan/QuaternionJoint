@@ -7,7 +7,7 @@ from QuaternionJoint import QuaternionJoint
 # Import from parent directory
 from dynamixel_controller import Dynamixel
 
-KP = 20000.0
+KP = 45.0
 KI = 0
 KD = 0
 ANTI_WINDUP = 20
@@ -38,34 +38,48 @@ class QJcontroller:
 
         self.prev_time = time()
 
-    def _tendons_jacobian(self, q, width=45):
+    def _tendons_jacobian(self, q, width=0.045):
         """
         Compute the 3×2 Jacobian matrix of (val1, val2, val3)
-        with respect to (rx, ry).
+        with respect to (rx, ry), safely handling rx=ry=0.
 
         Parameters
         ----------
-        rx : float
-            Rotation about x-axis, in radians.
-        ry : float
-            Rotation about y-axis, in radians.
+        q : array-like of shape (2,)
+            [rx, ry] rotations in radians.
         width : float
             Scaling factor used in val expressions.
 
         Returns
         -------
         J : ndarray of shape (3, 2)
-            Jacobian matrix [ [∂val_i/∂rx, ∂val_i/∂ry], i=1..3 ]
+            Jacobian matrix [[∂val_i/∂rx, ∂val_i/∂ry], i=1..3]
         """
 
-        rx = q[0]
-        ry = q[1]
+        rx = float(q[0])
+        ry = float(q[1])
 
         tx = np.tan(rx)
         ty = np.tan(ry)
 
         A = np.sqrt(1 + tx**2 + ty**2)
         B = np.sqrt(tx**2 + ty**2)
+
+        # ---- Handle near-zero B safely ----
+        eps = 1e-9
+        if B < eps:
+            # At rx=ry=0, we can derive the limit analytically.
+            # Using small-angle approximations: tan(x)≈x, A≈1
+            # The common factor C ≈ width * sqrt( (A - 1)/(A) ) → 0 linearly.
+            # Jacobian tends to 0 in most components except proportional terms.
+            return np.array([
+                [0.0,  2 * width * 0.5],          # derivative w.r.t ry dominates for val1
+                [-np.sqrt(3) * width / 2, -width], # approximate pattern
+                [ np.sqrt(3) * width / 2, -width]
+            ])
+
+        # -----------------------------------
+
         C = 2 * width * np.sqrt((A - 1) / (2 * A))
 
         # Common partials for A, B
@@ -177,7 +191,7 @@ class QJcontroller:
         f_cmd = np.where(f_cmd < self.force_min, self.force_min, f_cmd)
         f_cmd = np.where(f_cmd > self.force_max, self.force_max, f_cmd)
 
-        print(f_cmd)
+        # print(f_cmd)
 
         return f_cmd
     
@@ -217,19 +231,21 @@ if __name__ == "__main__":
     servo.set_operating_mode("current", ID="all")
     servo.write_current(10, ID="all")
     start_time = time()
-    print("waiting 5 sec")
-    while time() < start_time + 5:
+    print("waiting 3 sec")
+    while time() < start_time + 3:
         pass
 
     rx, ry = QuaternionJoint.read_rx_ry()
     q = np.array([rx, ry])
     controller.initialize(q)
 
-    q_des = np.array([np.deg2rad(0), np.deg2rad(0)])
+    q_des = np.array([np.deg2rad(0), np.deg2rad(30)])
     qd_des = np.array([0.0, 0.0])
     
 
     while True:
+
+        start_time = time()
         
         rx, ry = QuaternionJoint.read_rx_ry()
 
@@ -247,6 +263,9 @@ if __name__ == "__main__":
         except Exception as e:
             print(f"An error occurred: {e}")
             continue
+
+        print("rx, ry:", np.rad2deg(rx), np.rad2deg(ry))
+        
         
 
 
