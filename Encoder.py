@@ -15,8 +15,8 @@ class AMT23_Encoder():
 
         self.calibrated = True
         
-        self.encoder1_zero = 670
-        self.encoder2_zero = 2496
+        self.encoder1_zero = 1515
+        self.encoder2_zero = 1725
 
     def connect(self, vid, pid):
         port = self.find_serial_port(vid=vid, pid=pid)

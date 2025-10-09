@@ -131,7 +131,7 @@ if __name__ == "__main__":
     def angle_wrap(e):
         return (e + np.pi) % (2 * np.pi) - np.pi
 
-    port = "/dev/ttyUSB1"
+    port = "/dev/ttyUSB2"
     dxl_ids = [2, 1, 3]
     bdrt = 57600
     f_base = np.array([-25,-25,-25])
@@ -151,7 +151,7 @@ if __name__ == "__main__":
     q = np.array([theta, phi])
     controller.initialize(q)
 
-    q_des = np.array([np.deg2rad(40), np.deg2rad(180)])
+    q_des = np.array([np.deg2rad(40), np.deg2rad(0)])
     qd_des = np.array([0.0, 0.0])
     
 
@@ -163,9 +163,9 @@ if __name__ == "__main__":
 
         f_cmd = controller.compute(q, q_des, qd_des)
 
-        # servo.write_current(-f_cmd[0], ID=2)
-        # servo.write_current(-f_cmd[1], ID=1)
-        # servo.write_current(-f_cmd[2], ID=3)
+        servo.write_current(-f_cmd[0], ID=2)
+        servo.write_current(-f_cmd[1], ID=1)
+        servo.write_current(-f_cmd[2], ID=3)
         
 
 

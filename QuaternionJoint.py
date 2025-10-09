@@ -29,7 +29,7 @@ class QuaternionJoint:
 
         theta, phi = self.QJG.compute_theta_phi(angle1=2*angle1, angle2=2*angle2)
 
-        phi = (phi + np.pi/2)%(2*np.pi)
+        # phi = (phi + np.pi/2)%(2*np.pi)
 
         return theta, phi
     
