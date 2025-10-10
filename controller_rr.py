@@ -7,7 +7,7 @@ from QuaternionJoint import QuaternionJoint
 # Import from parent directory
 from dynamixel_controller import Dynamixel
 
-KP = 45.0
+KP = 35.0
 KI = 0
 KD = 0
 ANTI_WINDUP = 20
@@ -119,8 +119,50 @@ class QJcontroller:
             J[i, 1] = dC_dry * ni + C * dnry
 
         return J
-
     
+    def compute_jacobian_last(self, rx, ry, width=0.045, pa=np.radians(0), pb=np.radians(240), pc=np.radians(120)):
+        # Helper angles
+        A = np.cos(rx / 2)
+        B = np.sin(rx / 2)
+        C = np.cos(ry / 2)
+        S = np.sin(ry / 2)
+
+        N = np.sqrt(A**2 * S**2 + C**2)
+
+        def derivs(p):
+            cos_p = np.cos(p)
+            sin_p = np.sin(p)
+
+            num = A * S * cos_p + B * C * sin_p
+
+            # partial derivatives of numerator
+            dnum_drx = (-0.5 * np.sin(rx / 2)) * S * cos_p + (0.5 * np.cos(rx / 2)) * C * sin_p
+            dnum_dry = (0.5 * np.cos(rx / 2)) * C * cos_p - (0.5 * np.sin(rx / 2)) * S * sin_p
+
+            # partial derivatives of denominator
+            dN_drx = (A * (-np.sin(rx / 2)) * S**2) / (2 * N)
+            dN_dry = (A**2 * S * 0.5 * np.cos(ry / 2) - C * 0.5 * np.sin(ry / 2)) / N
+
+            # quotient rule: d(p) = 2w * num / N
+            dd_drx = 2 * width * (dnum_drx * N - num * dN_drx) / (N**2)
+            dd_dry = 2 * width * (dnum_dry * N - num * dN_dry) / (N**2)
+
+            return dd_drx, dd_dry
+
+        # Compute for a, b, c
+        dda_drx, dda_dry = derivs(pa)
+        ddb_drx, ddb_dry = derivs(pb)
+        ddc_drx, ddc_dry = derivs(pc)
+
+        # Jacobian matrix (3x2)
+        J = np.array([
+            [dda_drx, dda_dry],
+            [ddb_drx, ddb_dry],
+            [ddc_drx, ddc_dry],
+        ])
+
+        return J
+
     def _update_time(self):
         now_time = time()
         dt = now_time - self.prev_time
@@ -160,8 +202,6 @@ class QJcontroller:
 
         return f_proj
 
-
-
     def initialize(self, q):
         self.q_prev = q
         self.prev_time = time()
@@ -170,7 +210,7 @@ class QJcontroller:
 
     def compute(self, q, q_des, qd_des):
         
-        J = self._tendons_jacobian(q)
+        J = self.compute_jacobian_last(q[0], q[1])
 
         dt = self._update_time()
 
@@ -184,9 +224,20 @@ class QJcontroller:
 
         f_pinv = self._damped_least_square_inverse(J, tau_des)
 
+        shifted = f_pinv - f_pinv.min()
+
+        if shifted.max() != 0:
+            scaled = shifted * (f_pinv.max() / shifted.max())
+        else:
+            scaled = shifted
+
+        # print("scaled:", scaled)
+
+        # print("f_pinv:", f_pinv)
+
         f_proj = self._nullspace_force_projection(J)
 
-        f_cmd = f_pinv + f_proj
+        f_cmd = scaled + f_proj
 
         f_cmd = np.where(f_cmd < self.force_min, self.force_min, f_cmd)
         f_cmd = np.where(f_cmd > self.force_max, self.force_max, f_cmd)
@@ -213,13 +264,26 @@ def tendon_lengths_test(rx, ry):
 
     return np.array([val1, val2, val3])
     
+def tendons_lengths_last_attempt(rx, ry, width=45):
+
+    pa = np.radians(0)
+    pb = np.radians(240)
+    pc = np.radians(120)
+    
+    # da = 2*(np.sin(rx/2)*np.sin(pa) + np.sin(ry/2)*np.cos(pa))*width
+    da = 2*width*(np.cos(rx/2)*np.sin(ry/2)*np.cos(pa) + np.sin(rx/2)*np.cos(ry/2)*np.sin(pa)) / np.sqrt(np.cos(rx/2)**2 * np.sin(ry/2)**2 + np.cos(ry/2)**2)
+    db = 2*width*(np.cos(rx/2)*np.sin(ry/2)*np.cos(pb) + np.sin(rx/2)*np.cos(ry/2)*np.sin(pb)) / np.sqrt(np.cos(rx/2)**2 * np.sin(ry/2)**2 + np.cos(ry/2)**2)
+    dc = 2*width*(np.cos(rx/2)*np.sin(ry/2)*np.cos(pc) + np.sin(rx/2)*np.cos(ry/2)*np.sin(pc)) / np.sqrt(np.cos(rx/2)**2 * np.sin(ry/2)**2 + np.cos(ry/2)**2)
+
+    return np.array([da, db, dc])
+
 if __name__ == "__main__":
 
     controller = QJcontroller()
     QuaternionJoint = QuaternionJoint()
 
 
-    port = "/dev/ttyUSB2"
+    port = "/dev/ttyUSB1"
     dxl_ids = [2, 1, 3]
     bdrt = 57600
     f_base = np.array([25,25,25])
@@ -231,40 +295,46 @@ if __name__ == "__main__":
     servo.set_operating_mode("current", ID="all")
     servo.write_current(10, ID="all")
     start_time = time()
-    print("waiting 3 sec")
-    while time() < start_time + 3:
+    print("waiting 1 sec")
+    while time() < start_time + 1:
         pass
 
     rx, ry = QuaternionJoint.read_rx_ry()
     q = np.array([rx, ry])
     controller.initialize(q)
 
-    q_des = np.array([np.deg2rad(0), np.deg2rad(30)])
+    q_des = np.array([np.deg2rad(0), np.deg2rad(0)])
     qd_des = np.array([0.0, 0.0])
+
+    last_update_time = time()
+    update_interval = 3.0  # seconds
     
 
     while True:
-
         start_time = time()
-        
-        rx, ry = QuaternionJoint.read_rx_ry()
 
-        # print("rx, ry:", np.rad2deg(rx), np.rad2deg(ry))
+        if start_time - last_update_time >= update_interval:
+            new_angles_deg = np.random.uniform(-35, 35, size=2)
+            q_des = np.deg2rad(new_angles_deg)
+            last_update_time = start_time
+            print(f"\nNew q_des (deg): {new_angles_deg}")
+        
+        # --- Read current state ---
+        rx, ry = QuaternionJoint.read_rx_ry()
         q = np.array([rx, ry])
 
-        try:
-            f_cmd = controller.compute(q, q_des, qd_des)
+        # --- Compute control command ---
+        f_cmd = controller.compute(q, q_des, qd_des)
 
-            # print("Tendon lengths (m):", -tendon_lengths_test(rx, ry))
+        # print("Tendon lengths (m):", -tendons_lengths_last_attempt(rx, ry))
+        # print("Forces (mN):", f_cmd)
 
-            servo.write_current(f_cmd[0], ID=2)
-            servo.write_current(f_cmd[1], ID=1)
-            servo.write_current(f_cmd[2], ID=3)
-        except Exception as e:
-            print(f"An error occurred: {e}")
-            continue
+        # --- Send control to actuators ---
+        servo.write_current(f_cmd[0], ID=2)
+        servo.write_current(f_cmd[1], ID=1)
+        servo.write_current(f_cmd[2], ID=3)
 
-        print("rx, ry:", np.rad2deg(rx), np.rad2deg(ry))
+        # print("rx, ry (deg):", np.rad2deg(rx), np.rad2deg(ry))
         
         
 
